@@ -6,10 +6,14 @@ import itertools
 import datetime
 import time
 
+import lightning as L
+
+from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
 from torchvision.utils import save_image, make_grid
 
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard.summary import SummaryWriter
 from torchvision import datasets
 from torch.autograd import Variable
 
@@ -42,6 +46,7 @@ parser.add_argument("--lambda_id", type=float, default=5.0, help="identity loss 
 opt = parser.parse_args()
 print(opt)
 
+
 # Create sample and checkpoint directories
 os.makedirs("images/%s" % opt.dataset_name, exist_ok=True)
 os.makedirs("saved_models/%s" % opt.dataset_name, exist_ok=True)
@@ -56,6 +61,8 @@ cuda = torch.cuda.is_available()
 input_shape = (opt.channels, opt.img_height, opt.img_width)
 
 # Initialize generator and discriminator
+# fabric = L.Fabric(accelerator="cuda")
+# fabric.launch()
 G_AB = GeneratorResNet(input_shape, opt.n_residual_blocks)
 G_BA = GeneratorResNet(input_shape, opt.n_residual_blocks)
 D_A = Discriminator(input_shape)
@@ -155,6 +162,9 @@ def sample_images(batches_done):
 #  Training
 # ----------
 
+# Create summarywriter to write stats for tensorboard
+tb = SummaryWriter()
+
 prev_time = time.time()
 for epoch in range(opt.epoch, opt.n_epochs):
     for i, batch in enumerate(dataloader):
@@ -189,6 +199,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         loss_GAN_BA = criterion_GAN(D_A(fake_A), valid)
 
         loss_GAN = (loss_GAN_AB + loss_GAN_BA) / 2
+        tb.add_scalar("loss_GAN", loss_GAN, epoch)
 
         # Cycle loss
         recov_A = G_BA(fake_B)
@@ -197,9 +208,12 @@ for epoch in range(opt.epoch, opt.n_epochs):
         loss_cycle_B = criterion_cycle(recov_B, real_B)
 
         loss_cycle = (loss_cycle_A + loss_cycle_B) / 2
+        tb.add_scalar("loss_cycle", loss_cycle, epoch)
+
 
         # Total loss
         loss_G = loss_GAN + opt.lambda_cyc * loss_cycle + opt.lambda_id * loss_identity
+        tb.add_scalar("loss_G", loss_G, epoch)
 
         loss_G.backward()
         optimizer_G.step()
@@ -217,6 +231,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         loss_fake = criterion_GAN(D_A(fake_A_.detach()), fake)
         # Total loss
         loss_D_A = (loss_real + loss_fake) / 2
+        tb.add_scalar("loss_Discriminator_A", loss_D_A, epoch)
 
         loss_D_A.backward()
         optimizer_D_A.step()
@@ -234,6 +249,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         loss_fake = criterion_GAN(D_B(fake_B_.detach()), fake)
         # Total loss
         loss_D_B = (loss_real + loss_fake) / 2
+        tb.add_scalar("loss_Discriminator_B", loss_D_A, epoch)
 
         loss_D_B.backward()
         optimizer_D_B.step()

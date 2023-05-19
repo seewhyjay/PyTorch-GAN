@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import lightning as L
 
 
 def weights_init_normal(m):
@@ -19,7 +20,7 @@ def weights_init_normal(m):
 ##############################
 
 
-class ResidualBlock(nn.Module):
+class ResidualBlock(L.LightningModule):
     def __init__(self, in_features):
         super(ResidualBlock, self).__init__()
 
@@ -37,7 +38,7 @@ class ResidualBlock(nn.Module):
         return x + self.block(x)
 
 
-class GeneratorResNet(nn.Module):
+class GeneratorResNet(L.LightningModule):
     def __init__(self, input_shape, num_residual_blocks):
         super(GeneratorResNet, self).__init__()
 
@@ -92,7 +93,7 @@ class GeneratorResNet(nn.Module):
 ##############################
 
 
-class Discriminator(nn.Module):
+class Discriminator(L.LightningModule):
     def __init__(self, input_shape):
         super(Discriminator, self).__init__()
 
