@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 from torchvision.utils import save_image, make_grid
 
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard.summary import SummaryWriter
+# from torch.utils.tensorboard.summary import SummaryWriter
 from torchvision import datasets
 from torch.autograd import Variable
 
